@@ -1,0 +1,239 @@
+Jupyter Notebook
+Credit_Risk_other_wdnmdfull
+(unsaved changes)
+Current Kernel Logo
+Python 3 
+File
+Edit
+View
+Insert
+Cell
+Kernel
+Widgets
+Help
+
+import numpy as np
+import matplotlib.pyplot as plt
+from math import log, sqrt, exp
+from scipy import stats
+from scipy import optimize as sco
+%matplotlib inline
+import pandas_datareader.data as web
+import datetime as dt
+from scipy.stats import norm
+from yahoofinancials import YahooFinancials
+import pandas as pd
+def BS_call(S, X, T, rf, q, sigma):
+    # Black-Scholes-Merton Call Calculation
+    # Input Variable:
+    # s--Stock Price; x--Exercise Price; rf--Risk Free Rate;
+    # t--Time to Maturity; sigma--Volatility;  q--Continuous Dividend Yield
+​
+    G=float(S*exp(-q*T))
+    d1 = (log(G / X)+(rf + 0.5 * sigma ** 2) * T) / (sigma * sqrt(T))
+    d2 = d1 - sigma * (sqrt(T))
+    Nd1 = stats.norm.cdf (d1,0.0,1.0)
+    Nd2 = stats.norm.cdf (d2,0.0,1.0)
+    c0 = G*Nd1 - X*exp(-rf*T)*Nd2
+    return  c0
+​
+def Merton(V, F, T, rf, q, sigma):
+    equity = BS_call(V, F, T, rf, q, sigma)
+    G      = V*exp(-q*T)
+    B0     = G - equity
+    y      = -log(B0/F)/T
+    cs     = (y-rf)
+    
+    return B0, y, cs, equity
+def sigEquity(V, F, T, rf, q, sigmaV):
+    # compute the volatility of equity given V and sigmaV
+    G   = float(V*exp(-q*T))
+    eqT = BS_call(V, F, T, rf, q, sigmaV)
+    d1  = (log(G / F)+(rf + 0.5 * sigmaV ** 2) * T) / (sigmaV * sqrt(T))
+    Nd1 = stats.norm.cdf (d1,0.0,1.0)
+    vol_eqT = sigmaV*G*Nd1/eqT
+    return vol_eqT
+def myobjective(x):
+    # This is the objective function you want to minimize. 
+    # Take in a guess....Compute the equity value and equity volatility and minimize SSE
+    global F, T, rf, q, EqA, sigEA
+    V      = x[0]
+    sigmaV = x[1]
+    
+    eqT   = BS_call(V, F, T, rf, q, sigmaV)
+    sigET = sigEquity(V, F, T, rf, q, sigmaV)
+    SSE   = (eqT-EqA)**2 + 100*(sigET- sigEA)**2
+    return SSE
+def Get_V_sigV():
+    # This routine uses myvalues and an optimizer to imply out V and sigmaV
+    global F, T, rf, q, EqA, sigEA
+    Vguess = 2*EqA
+    sigV   = 2*sigEA
+    x      = (Vguess, sigV)
+    
+    
+    result = sco.minimize(myobjective, x)
+    ans    = result.x
+    
+    V      = ans[0]
+    sigmaV = ans[1]
+    return V, sigmaV
+def get_all_credit_stuff(rf, beta,MRP,sigma_V, F, V0, T):
+    mu_V = rf + beta*MRP
+    alpha_V = mu_V-0.5*sigma_V**2
+    DD = (alpha_V*T - log(F/V0))/sigma_V*sqrt(T)
+    PD = stats.norm.cdf (-DD,0.0,1.0)
+    DD_rn = ((rf-0.5*sigma_V**2)*T - log(F/V0))/sigma_V*sqrt(T)
+    PD_rn = stats.norm.cdf (-DD_rn,0.0,1.0)
+    
+    return DD, PD, DD_rn, PD_rn
+​
+def get_return(symbol, start, end):
+    length = (start-end).days
+    df = pd.DataFrame(columns=symbol)
+    for i, code in enumerate(symbol):
+        df.iloc[:,i] = np.log((web.DataReader(symbol[i], 'yahoo', start, end)['Adj Close'])/(web.DataReader(symbol[i], 'yahoo', start, end)['Adj Close'].shift(1))).dropna()
+    return df
+start = dt.datetime(2018,11,23)
+end = dt.datetime(2019,11,25)
+symbol = ['PIR','GPRO','TCS','JCP','SHLDQ']
+price = web.DataReader(symbol, 'yahoo', start, end)['Adj Close']
+returns = get_return(symbol, start, end)
+returns.head()
+PIR_sigma = returns['PIR'].std()*np.sqrt(252)
+PIR_sigma
+​
+GPRO_sigma = returns['GPRO'].std()*np.sqrt(252)
+GPRO_sigma
+TCS_sigma = returns['TCS'].std()*np.sqrt(252)
+JCP_sigma = returns['JCP'].std()*np.sqrt(252)
+SHLDQ_sigma = returns['SHLDQ'].std()*np.sqrt(252)
+PIR_eq = 741.96
+GPRO_eq = 624.58
+TCS_eq = 198.9
+JCP_eq = 368
+SHLDQ_eq = 23.74
+rf = 0.01763
+short_PIR = 489.963
+long_PIR = 258.9
+short_GPRO = 299.499
+long_GPRO = 138.992
+short_TCS = 141.275
+long_TCS = 254.96
+short_JCP = 1942
+long_JCP = 3716
+short_SHLDQ = 4915
+long_SHLDQ = 2249
+F_PIR = 0.5*long_PIR+short_PIR
+F_GPRO = 0.5*long_GPRO+short_GPRO
+F_TCS = 0.5*long_TCS+short_TCS
+F_JCP = 0.5*long_JCP+short_JCP
+F_SHLDQ = 0.5*long_SHLDQ+short_SHLDQ
+T = 1
+N_shares_PIR = 4.28
+N_shares_GPRO = 126.86
+N_shares_TCS = 49.23
+N_shares_JCP = 320
+N_shares_SHLDQ = 107.91
+​
+F_PIR_p= F_PIR/N_shares_PIR
+F_GPRO_p= F_GPRO/N_shares_GPRO
+F_TCS_p= F_TCS/N_shares_TCS
+F_JCP_p= F_PIR/N_shares_JCP
+F_SHLDQ_p= F_SHLDQ/N_shares_SHLDQ
+​
+div_PIR=0
+div_GPRO=0
+div_TCS=0
+div_JCP=0
+div_SHLDQ=0
+​
+beta_PIR = 1.63
+beta_GPRO = 0.87
+beta_TCS = 0.61
+beta_JCP = 1.63
+beta_SHLDQ = 2.41
+​
+​
+​
+​
+​
+V_guess_PIR = 1500; sigma_V_guess_PIR = 2; EqA=PIR_eq; sigEA=PIR_sigma; rf = 0.01763; F= F_PIR; q = div_PIR; T =1;
+x = (V_guess_PIR,sigma_V_guess_PIR)
+V_PIR, sigmaV_PIR = Get_V_sigV()
+print(V_PIR, sigmaV_PIR)
+V = V_PIR; F = F_PIR;T =1; rf=0.01763; q = 0; sigma = sigmaV_PIR
+B0_PIR, y_PIR, cs_PIR, equity_PIR = Merton(V, F, T, rf, q, sigma)
+print(B0_PIR, y_PIR, cs_PIR, equity_PIR)
+MRP = 0.043
+rf = 0.01763
+beta = beta_PIR
+sigma_V = sigmaV_PIR
+F = F_PIR
+V0 = V_PIR
+T = 1
+DD_PIR, PD_PIR, DD_rn_PIR, PD_rn_PIR = get_all_credit_stuff(rf, beta,MRP,sigma_V, F, V0, T)
+print(DD_PIR, PD_PIR, DD_rn_PIR, PD_rn_PIR)
+V_guess_GPRO = 1300; sigma_V_guess_GPRO = 1; EqA=GPRO_eq; sigEA=GPRO_sigma; rf = 0.01763; F= F_GPRO; q = div_GPRO; T =1;
+x = (V_guess_GPRO,sigma_V_guess_GPRO)
+V_GPRO, sigmaV_GPRO = Get_V_sigV()
+print(V_GPRO, sigmaV_GPRO)
+V = V_GPRO; F = F_GPRO;T =1; rf=0.01763; q = 0; sigma = sigmaV_GPRO
+B0_GPRO, y_GPRO, cs_GPRO, equity_GPRO = Merton(V, F, T, rf, q, sigma)
+print(B0_GPRO, y_GPRO, cs_GPRO, equity_GPRO)
+MRP = 0.043
+rf = 0.01763
+beta = beta_GPRO
+sigma_V = sigmaV_GPRO
+F = F_GPRO
+V0 = V_GPRO
+T = 1
+DD_GPRO, PD_GPRO, DD_rn_GPRO, PD_rn_GPRO = get_all_credit_stuff(rf, beta,MRP,sigma_V, F, V0, T)
+print(DD_GPRO, PD_GPRO, DD_rn_GPRO, PD_rn_GPRO)
+V_guess_TCS = 1300; sigma_V_guess_TCS = 1; EqA=TCS_eq; sigEA=TCS_sigma; rf = 0.01763; F= F_TCS; q = div_TCS; T =1;
+x = (V_guess_TCS,sigma_V_guess_TCS)
+V_TCS, sigmaV_TCS = Get_V_sigV()
+print(V_TCS, sigmaV_TCS)
+V = V_TCS; F = F_TCS;T =1; rf=0.01763; q = 0; sigma = sigmaV_TCS
+B0_TCS, y_TCS, cs_TCS, equity_TCS = Merton(V, F, T, rf, q, sigma)
+print(B0_TCS, y_TCS, cs_TCS, equity_TCS)
+MRP = 0.043
+rf = 0.01763
+beta = beta_TCS
+sigma_V = sigmaV_TCS
+F = F_TCS
+V0 = V_TCS
+T = 1
+DD_TCS, PD_TCS, DD_rn_TCS, PD_rn_TCS = get_all_credit_stuff(rf, beta,MRP,sigma_V, F, V0, T)
+print(DD_TCS, PD_TCS, DD_rn_TCS, PD_rn_TCS)
+V_guess_JCP = 1300; sigma_V_guess_JCP = 1; EqA=JCP_eq; sigEA=JCP_sigma; rf = 0.01763; F= F_JCP; q = div_JCP; T =1;
+x = (V_guess_JCP,sigma_V_guess_JCP)
+V_JCP, sigmaV_JCP = Get_V_sigV()
+print(V_JCP, sigmaV_JCP)
+V = V_JCP; F = F_JCP;T =1; rf=0.01763; q = 0; sigma = sigmaV_JCP
+B0_JCP, y_JCP, cs_JCP, equity_JCP = Merton(V, F, T, rf, q, sigma)
+print(B0_JCP, y_JCP, cs_JCP, equity_JCP)
+rf = 0.01763
+beta = beta_JCP
+sigma_V = sigmaV_JCP
+F = F_JCP
+V0 = V_JCP
+T = 1
+DD_JCP, PD_JCP, DD_rn_JCP, PD_rn_JCP = get_all_credit_stuff(rf, beta,MRP,sigma_V, F, V0, T)
+print(DD_JCP, PD_JCP, DD_rn_JCP, PD_rn_JCP)
+V_guess_SHLDQ = 1300; sigma_V_guess_SHLDQ = 1; EqA=SHLDQ_eq; sigEA=SHLDQ_sigma; rf = 0.01763; F= F_SHLDQ; q = div_SHLDQ; T =1;
+x = (V_guess_SHLDQ,sigma_V_guess_SHLDQ)
+V_SHLDQ, sigmaV_SHLDQ = Get_V_sigV()
+print(V_SHLDQ, sigmaV_SHLDQ)
+V = V_SHLDQ; F = F_SHLDQ;T =1; rf=0.01763; q = 0; sigma = sigmaV_SHLDQ
+B0_SHLDQ, y_SHLDQ, cs_SHLDQ, equity_SHLDQ = Merton(V, F, T, rf, q, sigma)
+print(B0_SHLDQ, y_SHLDQ, cs_SHLDQ, equity_SHLDQ)
+rf = 0.01763
+beta = beta_SHLDQ
+sigma_V = sigmaV_SHLDQ
+F = F_SHLDQ
+V0 = V_SHLDQ
+T = 1
+DD_SHLDQ, PD_SHLDQ, DD_rn_SHLDQ, PD_rn_SHLDQ = get_all_credit_stuff(rf, beta,MRP,sigma_V, F, V0, T)
+print(DD_SHLDQ, PD_SHLDQ, DD_rn_SHLDQ, PD_rn_SHLDQ)
+​
