@@ -1,0 +1,135 @@
+Jupyter Notebook
+GROUP8_PROJECT CODE OF 1 yr Note linked to BABA JD PDD
+(unsaved changes)
+Current Kernel Logo
+Python 3 
+File
+Edit
+View
+Insert
+Cell
+Kernel
+Widgets
+Help
+
+1 yr Note linked to BABA JD PDD
+Group 8： Sebastian Tian； Jiangkang Ma； Haotian He； Yuhan Li； Junjie Yin
+
+We need to calculate the Asain option price of BABA, JD and PDD. Then we assign a different weighs to adjust our portfolio allocation. Finally, we get the return of structure notes under good/normal/bad condtion.
+
+Price of an Average Rate Option
+Example: Considr a claim that at date T= 12 months, pays the average price of the stock at the end of each quarter less a strike price, or zero, whichever is greater.
+
+CT=Max(∑1i=12si12−X,0)
+where si is the stock price at quarter i,i=1,2,3,4,5...,11,12
+We need to build a path of prices for months:1, 2, 3, 4,...,11,12
+Once we have these prices, we can compute the payout of the average rate option. We discount this value and save it.
+We do this nsim times,
+We then compute a confidence interval for the price.
+import numpy as np
+import matplotlib.pyplot as plt
+% matplotlib inline
+from scipy import stats
+from math import exp, sqrt, log, pi
+from scipy.stats import norm
+##baba option price
+​
+def average_rate_option(s, x, T, r, q, sigma, npts, nsims):
+    #Initialize variables
+    dt = T/npts
+    s1 = np.zeros((npts+1, nsims))
+    cvalues = np.zeros(nsims)
+    mydates = np.zeros(npts+1)
+    alpha = (r-q)-(sigma**2)/2
+    z = np.random.standard_normal((npts, nsims))
+    s1[0,:]= s
+    # Step 2: Main Loop  ( each path is a column)
+    for t in range(1, npts+1):
+        s1[t,:]= (s1[t-1,:]*np.exp((alpha-0.5*sigma**2)*dt + 
+                                 sigma*np.sqrt(dt)*z[t-1,:]))
+        mydates[t]= dt*t
+        
+        
+    myav = (s1.sum(axis = 0) - s)/npts
+​
+    mypayout = np.maximum(0, myav-x)*np.exp(-r*T)
+    myans = mypayout.mean()
+    mystd = mypayout.std()
+    lower = myans - 1.96*mystd/np.sqrt(nsims)
+    upper = myans + 1.96*mystd/np.sqrt(nsims)
+    return myans, lower, upper
+​
+​
+s = 185.25; x = 185.25; T = 1.0; r = 0.01784 ; q = 0.0; sigma = 0.019837269*sqrt(252) ; nsims = 10000; npts= 12
+​
+myans, lower, upper = average_rate_option(s, x, T, r, q, sigma, npts, nsims)
+print('The simulated value of the Average rate call is', round(myans, 3))
+print('Lower bound is ', round(lower, 3))
+print('Upper bound is ', round(upper, 3)) 
+babaoptionprice=myans
+​
+###pdd
+s = 40.72; x = 40.72; T = 1.0; r = 0.01784 ; q = 0.0; sigma = 0.046741216*sqrt(252) ; nsims = 10000; npts= 12
+​
+myans, lower, upper = average_rate_option(s, x, T, r, q, sigma, npts, nsims)
+print('The simulated value of the Average rate call is', round(myans, 3))
+print('Lower bound is ', round(lower, 3))
+print('Upper bound is ', round(upper, 3))    
+pddoptionprice=myans
+##jd
+s = 32.44; x = 32.44; T = 1.0; r = 0.01784 ; q = 0.0; sigma =0.027498906*sqrt(252) ; nsims = 10000; npts= 12
+​
+myans, lower, upper = average_rate_option(s, x, T, r, q, sigma, npts, nsims)
+print('The simulated value of the Average rate call is', round(myans, 3))
+print('Lower bound is ', round(lower, 3))
+print('Upper bound is ', round(upper, 3))    
+jdoptionprice=myans
+#if we allocate same weights(f) to BABA, JD, PDD
+def returnofsn(amount, unit,  change, rf, percent):
+    percapital=amount/unit
+    f=(amount*percent)/(babaoptionprice+pddoptionprice+jdoptionprice)
+    if change > 0:
+        
+        return_of_minor=(f*185.25+f*32.44+f*40.72)*change
+    else:
+        return_of_minor=0
+            
+    return_of_all=(rf*(1-percent)*amount+return_of_minor-amount*percent)/amount
+    
+    return  f , return_of_all
+​
+    
+amount=10000000; unit=10000;  change=0.3 ; rf=0.01548; percent=0.05; 
+f, return_of_all=returnofsn(amount, unit,  change, rf, percent)
+print('return of this structure notes is:   ', return_of_all)
+​
+##calculate participation rate
+participation_rate=f*3*1/3*(185.25+32.44+40.72)/amount
+print('participation_rate is :  ',participation_rate)
+​
+​
+amount=10000000; unit=10000;  change=-0.2 ; rf=0.01548; percent=0.05; 
+return_of_minor, return_of_all=returnofsn(amount, unit,  change, rf, percent)
+print('return of this structure notes is:   ', return_of_all)
+#if we allocate different weights(f1,f2,f3) to BABA, JD, PDD
+def returnofsn(amount, unit,  change, rf, percent):
+    percapital=amount/unit
+    f1=(amount*percent*0.8)/babaoptionprice
+    f2=(amount*percent*0.1)/jdoptionprice
+    f3=(amount*percent*0.1)/pddoptionprice
+    if change > 0:
+        
+        return_of_minor=(f1*185.25+f2*32.44+f3*40.72)*change
+    else:
+        return_of_minor=0
+            
+    return_of_all=(rf*(1-percent)*amount+return_of_minor-amount*percent)/amount
+    
+    return  return_of_minor, return_of_all
+​
+​
+amount=10000000; unit=10000;  change=0.3 ; rf=0.01548; percent=0.05; 
+return_of_minor, return_of_all=returnofsn(amount, unit,  change, rf, percent)
+print('return of this structure notes is:   ', return_of_all)
+​
+​
