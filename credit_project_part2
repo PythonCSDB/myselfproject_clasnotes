@@ -1,0 +1,451 @@
+Jupyter Notebook
+GROUP8_CREDIT_PROJECT_PART2 Broadie and Kaya Capital Structure Model
+(unsaved changes)
+Current Kernel Logo
+Python 3 
+File
+Edit
+View
+Insert
+Cell
+Kernel
+Widgets
+Help
+
+CREDIT_PROJECT__PART2 Broadie and Kaya Capital Structure Model
+Group 8 Sebastian Tian; Jiangkang Ma; Haotian He; Yuhan Li; Junjie Yin;
+
+Project:
+Rewrite the above program but for a general n; Run your program with
+V0 = 100.0; T = 10.0; F= 0.0; q = 0.0; r= 0.06; sigma = 0.40; FF = 100; coupon = 5% nperiods = 100..... THis implies that the bond issued is an annuity paying coupons continuously at a coupon of 5% of FF, ie 5 dollars a year, or 5*dt a period. Assume b = 0.50 and tau = 0.25
+
+Then assume a bankruptcy cost of zero, b = 0, and a tax rate of zero. Do a sensitivity analysis with coupons on the x axis and equity and bond prices on the y axis as well as the value of the levered firm.Based on the figure you generate you should have confirmed the M&M theory.
+
+Now repeat the analysis for a tax rate of 25% and a bankruptcy cost of 90%. Plot coupons from 0 to 16 and find the optimal capital structure.
+
+Now put FF = 100 and F = 0 and increase nperiods. PLot a graph of the price of equity against nperiods. (T is fixed at 10)
+
+V0 = 100.0;F= 0;cr = 0.05 ;q= 0.0;FF = 100;sigma = 0.30; tau = 0.25; b = 0.50. Increase time, T from amost 0 years to 200 years and for each maturity identify the equity and plot the graph. ( you should perhaps take time increments of 25 years.
+
+Program up the Leland Model and compute the equity value and bond value and compare your answers with a long dated annuity computed on the lattice.
+
+Now use the Leland model to show the sensitivity of bond prices to coupons for different asset volatilities. Interpret the results.
+
+import numpy as np
+import matplotlib.pyplot as plt
+from math import log, sqrt, exp
+from scipy import stats
+from scipy import optimize as sco
+%matplotlib inline
+#1
+#An extended model for general n
+V0 = 100.0; T = 10.0; F= 0.0; q = 0.0; r= 0.06; sigma = 0.40; FF = 100; cr = 0.05; n = 100; b = 0.50; tau = 0.25
+def v_cash(T,n, sigma, r, q, V0):
+    
+    dt = T/n
+    u = exp(sigma*sqrt(dt))
+    d = 1/u
+    disc = exp(-r*dt)
+    p = (exp((r-q)*dt) - d)/(u - d)
+    pbar = 1-p
+    delta = exp(q*dt)-1
+    c = cr*FF*dt
+    
+    #V[j,t].....j downjumps in t periods j = 0....,t
+    V      = np.zeros((n+1,n+1))
+    cash   = np.zeros((n+1,n+1))
+    V[0,0] = V0
+    for t in range(1,n+1):
+        V[0,t]    = u*V[0,t-1]
+        cash[0,t] = V[0,t]*delta
+        V[t,t]    = d*V[t-1,t-1]
+        cash[t,t] = delta*V[t,t]
+    for t in range(2, n+1):
+        for j in range(1,t):
+            V[j, t] = V[j-1,t]*d**2
+            cash[j,t] = V[j,t]*delta
+    return V, cash
+​
+   
+def full_result(T,n, sigma, r, q,F,FF, cr, tau, b):
+        
+    dt = T/n
+    u = exp(sigma*sqrt(dt))
+    d = 1/u
+    disc = exp(-r*dt)
+    p = (exp((r-q)*dt) - d)/(u - d)
+    pbar = 1-p
+    delta = exp(q*dt)-1
+    c = cr*FF*dt
+    
+    eq = np.zeros((n+1,n+1))
+    bond = np.zeros((n+1,n+1))
+    VL = np.zeros((n+1,n+1))
+    law = np.zeros((n+1,n+1))
+    tax = np.zeros((n+1,n+1))
+    V      = np.zeros((n+1,n+1))
+    cash   = np.zeros((n+1,n+1))
+    V[0,0] = V0
+    
+    for t in range(1,n+1):
+        V[0,t]    = u*V[0,t-1]
+        cash[0,t] = V[0,t]*delta
+        V[t,t]    = d*V[t-1,t-1]
+        cash[t,t] = delta*V[t,t]
+    for t in range(2, n+1):
+        for j in range(1,t):
+            V[j, t] = V[j-1,t]*d**2
+            cash[j,t] = V[j,t]*delta
+​
+​
+    for j in range(0, n+1):
+        if V[j,n] + cash[j,n] > (1-tau)*c + F:
+            eq[j,n] = V[j,n] + cash[j,n] - ((1-tau)*c + F)
+            bond[j,n] = c + F
+            VL[j,n] = V[j,n] + cash[j,n] + tau*c
+            law[j,n] = 0
+            tax[j,n] = tau*c
+        else:
+            eq[j,n] = 0
+            bond[j,n] = (1-b)*(V[j,n]+cash[j,n])
+            VL[j,n] = bond[j,n]
+            law[j,n] = b*(V[j,n] + cash[j,n])
+            tax[j,n] = 0.0
+        
+    for t in range(n-1, -1, -1):
+        
+        for j in range(0, t+1):
+            eqtilde = disc*(p*eq[j, t+1] + pbar*eq[j+1, t+1])
+            btilde = disc*(p*bond[j, t+1] + pbar*bond[j+1,t+1])
+            VLtilde = disc*(p*VL[j, t+1] + pbar*VL[j+1, t+1])
+            lawtilde = disc*(p*law[j, t+1]+ pbar*law[j+1, t+1])
+            taxtilde = disc*(p*tax[j,t+1]+pbar*tax[j+1,t+1])
+        
+            if (eqtilde +cash[j,t] > ( 1-tau)*c):
+                eq[j,t] = eqtilde + cash[j,t]- (1-tau)*c
+                bond[j,t] = btilde + c
+                VL[j,t] = VLtilde  + cash[j,t] + tau*c
+                law[j,t] = lawtilde
+                tax[j,t] = taxtilde + tau*c
+            else:
+                eq[j,t] = 0
+                bond[j,t] = (1-b)*(V[j,t]+cash[j,t])
+                VL[j,t] = bond[j,t]
+                law[j,t] = b*(V[j,t]+cash[j,t])
+                tax[j,t] = 0.0
+             
+    return eq, bond, VL, law, tax, V, cash
+eq1, bond1, VL1, law1, tax1, V1, cash1 = full_result(T,n, sigma, r, q,F,FF, cr, tau, b)
+#2
+V0 = 100.0; T = 10.0; F= 0.0; q = 0.0; r= 0.06; sigma = 0.40; FF = 100; cr = 0.03; n = 100; b = 0.00; tau = 0.00;cr_end =101
+​
+def sensitivity2(T,n, sigma, r, q,F,FF, tau, b, cr_end):
+    equity_v = np.zeros(cr_end+1)
+    bond_v = np.zeros(cr_end+1)
+    VL_v = np.zeros(cr_end+1)
+    eq = np.zeros((n+1,n+1))
+    bond = np.zeros((n+1,n+1))
+    VL = np.zeros((n+1,n+1))
+    law = np.zeros((n+1,n+1))
+    tax = np.zeros((n+1,n+1))
+    V      = np.zeros((n+1,n+1))
+    cash   = np.zeros((n+1,n+1))
+    V[0,0] = V0
+    cr_range = np.arange(0,cr_end+1)/100
+    dt = T/n
+    u = exp(sigma*sqrt(dt))
+    d = 1/u
+    disc = exp(-r*dt)
+    p = (exp((r-q)*dt) - d)/(u - d)
+    pbar = 1-p
+    delta = exp(q*dt)-1
+    
+    for t in range(1,n+1):
+        V[0,t]    = u*V[0,t-1]
+        cash[0,t] = V[0,t]*delta
+        V[t,t]    = d*V[t-1,t-1]
+        cash[t,t] = delta*V[t,t]
+    for t in range(2, n+1):
+        for j in range(1,t):
+            V[j, t] = V[j-1,t]*d**2
+            cash[j,t] = V[j,t]*delta
+    
+    for i, cr in enumerate(cr_range):
+        c = cr*FF*dt
+        for j in range(0, n+1):
+            if V[j,n] + cash[j,n] > (1-tau)*c + F:
+                eq[j,n] = V[j,n] + cash[j,n] - ((1-tau)*c + F)
+                bond[j,n] = c + F
+                VL[j,n] = V[j,n] + cash[j,n] + tau*c
+                law[j,n] = 0
+                tax[j,n] = tau*c
+            else:
+                eq[j,n] = 0
+                bond[j,n] = (1-b)*(V[j,n]+cash[j,n])
+                VL[j,n] = bond[j,n]
+                law[j,n] = b*(V[j,n] + cash[j,n])
+                tax[j,n] = 0.0
+        
+        for t in range(n-1, -1, -1):
+        
+            for j in range(0, t+1):
+                eqtilde = disc*(p*eq[j, t+1] + pbar*eq[j+1, t+1])
+                btilde = disc*(p*bond[j, t+1] + pbar*bond[j+1,t+1])
+                VLtilde = disc*(p*VL[j, t+1] + pbar*VL[j+1, t+1])
+                lawtilde = disc*(p*law[j, t+1]+ pbar*law[j+1, t+1])
+                taxtilde = disc*(p*tax[j,t+1]+pbar*tax[j+1,t+1])
+        
+                if (eqtilde +cash[j,t] > ( 1-tau)*c):
+                    eq[j,t] = eqtilde + cash[j,t]- (1-tau)*c
+                    bond[j,t] = btilde + c
+                    VL[j,t] = VLtilde  + cash[j,t] + tau*c
+                    law[j,t] = lawtilde
+                    tax[j,t] = taxtilde + tau*c
+                else:
+                    eq[j,t] = 0
+                    bond[j,t] = (1-b)*(V[j,t]+cash[j,t])
+                    VL[j,t] = bond[j,t]
+                    law[j,t] = b*(V[j,t]+cash[j,t])
+                    tax[j,t] = 0.0
+                
+        equity_v[i] = eq[0,0]
+        bond_v[i] = bond[0,0]
+        VL_v[i] = VL[0,0]
+        
+    return equity_v, bond_v, VL_v, cr_range
+​
+        
+equity_v2, bond_v2, VL_v2, cr_range2 = sensitivity2(T,n, sigma, r, q,F,FF, tau, b,cr_end)
+plt.plot(cr_range2, equity_v2, label='equity')
+plt.plot(cr_range2, bond_v2, label='debt')
+plt.plot(cr_range2, VL_v2, label='levered firm')
+plt.xlabel('coupon rate');
+plt.title("sensitivity analysis & capital structure");
+plt.legend();
+ANSWER: Indeed, the M&M thoery is confirmed because the percentage of debt does not influence the value of levered firm under the assumption that bankruptcy cost of zero and a tax rate of zero
+
+#3
+V0 = 100.0; T = 10.0; F= 0.0; q = 0.0; r= 0.06; sigma = 0.40; FF = 100; n = 100; b = 0.90; tau = 0.25; cr_end =16
+equity_v3, bond_v3, VL_v3, cr_range3 = sensitivity2(T,n, sigma, r, q,F,FF, tau, b, cr_end)
+plt.plot(cr_range3, equity_v3, label='equity')
+plt.plot(cr_range3, bond_v3, label='debt')
+plt.plot(cr_range3, VL_v3, label='levered firm')
+plt.xlabel('coupon rate');
+plt.title("sensitivity analysis & capital structure");
+plt.legend();
+print(cr_range3)
+print(VL_v3)
+max(VL_v3)
+ANSWER: We can see that, when coupon rate=8%, the optimal capital structure=max(VL_v2)=111.3446
+
+#4
+V0 = 100.0; T = 10.0; F= 0.0; q = 0.0; r= 0.06; sigma = 0.40; FF = 100; b = 0.90; tau = 0.25; cr = 0.05; n_end = 101
+def sensitivity4(T,n_end, sigma, r, q,F,FF, tau, b, cr):
+    n_range = range(1,n_end)
+    equity_v = np.zeros(n_end-1)
+    bond_v = np.zeros(n_end-1)
+    VL_v = np.zeros(n_end-1)
+    for n in n_range:
+        eq = np.zeros((n+1,n+1))
+        bond = np.zeros((n+1,n+1))
+        VL = np.zeros((n+1,n+1))
+        law = np.zeros((n+1,n+1))
+        tax = np.zeros((n+1,n+1))
+        V      = np.zeros((n+1,n+1))
+        cash   = np.zeros((n+1,n+1))
+        dt = T/n
+        c = cr*FF*dt
+        V[0,0] = V0
+        u = exp(sigma*sqrt(dt))
+        d = 1/u
+        disc = exp(-r*dt)
+        p = (exp((r-q)*dt) - d)/(u - d)
+        pbar = 1-p
+        delta = exp(q*dt)-1
+    
+        for t in range(1,n+1):
+            V[0,t]    = u*V[0,t-1]
+            cash[0,t] = V[0,t]*delta
+            V[t,t]    = d*V[t-1,t-1]
+            cash[t,t] = delta*V[t,t]
+        for t in range(2, n+1):
+            for j in range(1,t):
+                V[j, t] = V[j-1,t]*d**2
+                cash[j,t] = V[j,t]*delta
+    
+    
+        for j in range(0, n+1):
+            if V[j,n] + cash[j,n] > (1-tau)*c + F:
+                eq[j,n] = V[j,n] + cash[j,n] - ((1-tau)*c + F)
+                bond[j,n] = c + F
+                VL[j,n] = V[j,n] + cash[j,n] + tau*c
+                law[j,n] = 0
+                tax[j,n] = tau*c
+            else:
+                eq[j,n] = 0
+                bond[j,n] = (1-b)*(V[j,n]+cash[j,n])
+                VL[j,n] = bond[j,n]
+                law[j,n] = b*(V[j,n] + cash[j,n])
+                tax[j,n] = 0.0
+        
+        for t in range(n-1, -1, -1):
+        
+            for j in range(0, t+1):
+                eqtilde = disc*(p*eq[j, t+1] + pbar*eq[j+1, t+1])
+                btilde = disc*(p*bond[j, t+1] + pbar*bond[j+1,t+1])
+                VLtilde = disc*(p*VL[j, t+1] + pbar*VL[j+1, t+1])
+                lawtilde = disc*(p*law[j, t+1]+ pbar*law[j+1, t+1])
+                taxtilde = disc*(p*tax[j,t+1]+pbar*tax[j+1,t+1])
+        
+                if (eqtilde +cash[j,t] > ( 1-tau)*c):
+                    eq[j,t] = eqtilde + cash[j,t]- (1-tau)*c
+                    bond[j,t] = btilde + c
+                    VL[j,t] = VLtilde  + cash[j,t] + tau*c
+                    law[j,t] = lawtilde
+                    tax[j,t] = taxtilde + tau*c
+                else:
+                    eq[j,t] = 0
+                    bond[j,t] = (1-b)*(V[j,t]+cash[j,t])
+                    VL[j,t] = bond[j,t]
+                    law[j,t] = b*(V[j,t]+cash[j,t])
+                    tax[j,t] = 0.0
+                
+        equity_v[n-1] = eq[0,0]
+        bond_v[n-1] = bond[0,0]
+        VL_v[n-1] = VL[0,0]
+        
+    return equity_v, bond_v, VL_v, n_range
+​
+equity_v4, bond_v4, VL_v4, n_range4 = sensitivity4(T,n_end, sigma, r, q,F,FF, tau, b, cr)
+plt.plot(n_range4, equity_v4)
+plt.xlabel('periods');
+plt.ylabel('equity price');
+#5
+def T_equity_analysis(T_end,n, sigma, r, q,F,FF, tau, b, cr):
+    T_n = int(T_end/25+1)
+    equity_v = np.zeros(T_n)
+    bond_v = np.zeros(T_n)
+    VL_v = np.zeros(T_n)
+    eq = np.zeros((n+1,n+1))
+    bond = np.zeros((n+1,n+1))
+    VL = np.zeros((n+1,n+1))
+    law = np.zeros((n+1,n+1))
+    tax = np.zeros((n+1,n+1))
+    V      = np.zeros((n+1,n+1))
+    cash   = np.zeros((n+1,n+1))
+    V[0,0] = V0
+    T_range = np.zeros(9)
+    T_range[0] = 0.001
+    T_values = range(25,T_end,25)
+    for i, value in enumerate(T_values):
+        T_range[i+1] = value
+    for i, T in enumerate(T_range):
+        dt = T/n
+        u = exp(sigma*sqrt(dt))
+        d = 1/u
+        disc = exp(-r*dt)
+        p = (exp((r-q)*dt) - d)/(u - d)
+        pbar = 1-p
+        delta = exp(q*dt)-1
+        c = cr*FF*dt
+    
+        for t in range(1,n+1):
+            V[0,t]    = u*V[0,t-1]
+            cash[0,t] = V[0,t]*delta
+            V[t,t]    = d*V[t-1,t-1]
+            cash[t,t] = delta*V[t,t]
+        for t in range(2, n+1):
+            for j in range(1,t):
+                V[j, t] = V[j-1,t]*d**2
+                cash[j,t] = V[j,t]*delta
+        
+        for j in range(0, n+1):
+            if V[j,n] + cash[j,n] > (1-tau)*c + F:
+                eq[j,n] = V[j,n] + cash[j,n] - ((1-tau)*c + F)
+                bond[j,n] = c + F
+                VL[j,n] = V[j,n] + cash[j,n] + tau*c
+                law[j,n] = 0
+                tax[j,n] = tau*c
+            else:
+                eq[j,n] = 0
+                bond[j,n] = (1-b)*(V[j,n]+cash[j,n])
+                VL[j,n] = bond[j,n]
+                law[j,n] = b*(V[j,n] + cash[j,n])
+                tax[j,n] = 0.0
+        
+        for t in range(n-1, -1, -1):
+        
+            for j in range(0, t+1):
+                eqtilde = disc*(p*eq[j, t+1] + pbar*eq[j+1, t+1])
+                btilde = disc*(p*bond[j, t+1] + pbar*bond[j+1,t+1])
+                VLtilde = disc*(p*VL[j, t+1] + pbar*VL[j+1, t+1])
+                lawtilde = disc*(p*law[j, t+1]+ pbar*law[j+1, t+1])
+                taxtilde = disc*(p*tax[j,t+1]+pbar*tax[j+1,t+1])
+        
+                if (eqtilde +cash[j,t] > ( 1-tau)*c):
+                    eq[j,t] = eqtilde + cash[j,t]- (1-tau)*c
+                    bond[j,t] = btilde + c
+                    VL[j,t] = VLtilde  + cash[j,t] + tau*c
+                    law[j,t] = lawtilde
+                    tax[j,t] = taxtilde + tau*c
+                else:
+                    eq[j,t] = 0
+                    bond[j,t] = (1-b)*(V[j,t]+cash[j,t])
+                    VL[j,t] = bond[j,t]
+                    law[j,t] = b*(V[j,t]+cash[j,t])
+                    tax[j,t] = 0.0
+                
+        equity_v[i] = eq[0,0]
+        bond_v[i] = bond[0,0]
+        VL_v[i] = VL[0,0]
+        
+    return equity_v, bond_v, VL_v, T_range
+V0 = 100.0; T_end = 201; F= 0.0; q = 0.0; r= 0.06; sigma = 0.30; FF = 100; b = 0.50; tau = 0.25; cr = 0.05; n = 100
+equity_v5, bond_v5, VL_v5, T_range5 = T_equity_analysis(T_end,n, sigma, r, q,F,FF, tau, b, cr)
+plt.plot(T_range5, equity_v5)
+plt.xlabel('time');
+plt.ylabel('equity price');
+​
+#6 leland model
+V0 = 100.0; T = 200.0; F= 0.0; q = 0.0; r= 0.05; sigma = 0.20; FF = 100;
+cr = 0.06; n = 100; b = 0.50; tau = 0.25;rf=0.015; cr_end=60
+dt = 1/12
+c = cr*FF*dt
+lambda1=2*rf/(sigma**2)
+v_b=(1-tau)*c/(rf+0.5*sigma**2)
+d_v=c/rf+((1-b)*v_b-c/rf)*((v0/v_b)**(-lambda1))
+vl_v=v0+(tau*c/r)*(1-(v0/v_b)**(-lambda1))-b*v_b*((v0/v_b)**(-lambda1))
+v_e=v0-(1-tau)*c/rf+((1-tau)*c/rf-v_b)*((v0/v_b)**(-tau))
+print(v_e, vl_v, d_v)
+ANSWER: It close to the results calculated by lattice.
+
+#7
+def leland_sensitivity(sigma, cr_end, rf ):
+    d_v = np.zeros(cr_end+1)
+    vl_v = np.zeros(cr_end+1)
+    v_e = np.zeros(cr_end+1)
+    dt = 1/12
+    lambda1=2*rf/(sigma**2)
+    cr_range = np.arange(0,cr_end+1)/100
+    for i, cr in enumerate(cr_range):
+        c = cr*FF*dt
+        v_b=(1-tau)*c/(rf+0.5*sigma**2)
+        d_v[i]=c/rf+((1-b)*v_b-c/rf)*((v0/v_b)**(-lambda1))
+        vl_v[i]=v0+(tau*c/r)*(1-(v0/v_b)**(-lambda1))-b*v_b*((v0/v_b)**(-lambda1))
+        v_e[i]=v0-(1-tau)*c/rf+((1-tau)*c/rf-v_b)*((v0/v_b)**(-tau))
+    return d_v , vl_v , v_e , cr_range
+sigma=0.2
+d_v1 , vl_v1 , v_e1 , cr_range=leland_sensitivity(sigma, cr_end, rf )
+sigma=0.3
+d_v2 , vl_v2 , v_e2 , cr_range=leland_sensitivity(sigma, cr_end, rf )
+sigma=0.4
+d_v3 , vl_v3 , v_e3 , cr_range=leland_sensitivity(sigma, cr_end, rf )
+plt.plot(cr_range*10, d_v1, label='volatility=0.2')
+plt.plot(cr_range*10, d_v2, label='volatility=0.3')
+plt.plot(cr_range*10, d_v3, label='volatility=0.4')
+plt.xlabel('coupon');
+plt.ylabel('bond price');
+plt.legend();
+ANSWER: If a company has a low volatility, it can issue debt at a low coupon rate which means a higher bond price. It implies that a low-risk company has a low debt cost
+
+​
