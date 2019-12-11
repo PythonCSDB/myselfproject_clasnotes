@@ -1,5 +1,5 @@
 Jupyter Notebook
-Credit_Risk_other_wdnmdfull
+GROUP8_CREDIT PROJECT_PART1_FIRM ANALYSIS
 (unsaved changes)
 Current Kernel Logo
 Python 3 
@@ -11,6 +11,9 @@ Cell
 Kernel
 Widgets
 Help
+
+CREDIT PROJECT_PART1_FIRM ANALYSIS
+Group 8 Sebastian Tian; Jiangkang Ma; Haotian He; Yuhan Li; Junjie Yin;
 
 import numpy as np
 import matplotlib.pyplot as plt
@@ -78,7 +81,7 @@ def Get_V_sigV():
     V      = ans[0]
     sigmaV = ans[1]
     return V, sigmaV
-def get_all_credit_stuff(rf, beta,MRP,sigma_V, F, V0, T):
+def DD_PD(rf, beta,MRP,sigma_V, F, V0, T):
     mu_V = rf + beta*MRP
     alpha_V = mu_V-0.5*sigma_V**2
     DD = (alpha_V*T - log(F/V0))/sigma_V*sqrt(T)
@@ -96,144 +99,122 @@ def get_return(symbol, start, end):
     return df
 start = dt.datetime(2018,11,23)
 end = dt.datetime(2019,11,25)
-symbol = ['PIR','GPRO','TCS','JCP','SHLDQ']
+symbol = ['GNC','SMRT','ODP','ASNA','SHLDQ']
 price = web.DataReader(symbol, 'yahoo', start, end)['Adj Close']
 returns = get_return(symbol, start, end)
 returns.head()
-PIR_sigma = returns['PIR'].std()*np.sqrt(252)
-PIR_sigma
-​
-GPRO_sigma = returns['GPRO'].std()*np.sqrt(252)
-GPRO_sigma
-TCS_sigma = returns['TCS'].std()*np.sqrt(252)
-JCP_sigma = returns['JCP'].std()*np.sqrt(252)
+GNC_sigma = returns['GNC'].std()*np.sqrt(252)
+GNC_sigma
+SMRT_sigma = returns['SMRT'].std()*np.sqrt(252)
+SMRT_sigma
+ODP_sigma = returns['ODP'].std()*np.sqrt(252)
+ODP_sigma
+ASNA_sigma = returns['ASNA'].std()*np.sqrt(252)
+ASNA_sigma
 SHLDQ_sigma = returns['SHLDQ'].std()*np.sqrt(252)
-PIR_eq = 741.96
-GPRO_eq = 624.58
-TCS_eq = 198.9
-JCP_eq = 368
-SHLDQ_eq = 23.74
+SHLDQ_sigma
+GNC_eq = 239.32
+SMRT_eq = 34.77
+ODP_eq = 1191
+ASNA_eq = 85.56
+SHLDQ_eq = 22.55
 rf = 0.01763
-short_PIR = 489.963
-long_PIR = 258.9
-short_GPRO = 299.499
-long_GPRO = 138.992
-short_TCS = 141.275
-long_TCS = 254.96
-short_JCP = 1942
-long_JCP = 3716
-short_SHLDQ = 4915
-long_SHLDQ = 2249
-F_PIR = 0.5*long_PIR+short_PIR
-F_GPRO = 0.5*long_GPRO+short_GPRO
-F_TCS = 0.5*long_TCS+short_TCS
-F_JCP = 0.5*long_JCP+short_JCP
-F_SHLDQ = 0.5*long_SHLDQ+short_SHLDQ
+MRP = 0.043
+ST_GNC = 427.707
+LT_GNC = 993.566
+ST_SMRT = 167.296
+LT_SMRT = 153.253
+ST_ODP = 2185
+LT_ODP = 1389
+ST_ASNA = 798.2
+LT_ASNA = 1338.6
+ST_SHLDQ = 4915
+LT_SHLDQ = 2249
+F_GNC = 0.5*LT_GNC+ST_GNC
+F_SMRT = 0.5*LT_SMRT+ST_SMRT
+F_ODP = 0.5*LT_ODP+ST_ODP
+F_ASNA = 0.5*LT_ASNA+ST_ASNA
+F_SHLDQ = 0.5*LT_SHLDQ+ST_SHLDQ
 T = 1
-N_shares_PIR = 4.28
-N_shares_GPRO = 126.86
-N_shares_TCS = 49.23
-N_shares_JCP = 320
-N_shares_SHLDQ = 107.91
 ​
-F_PIR_p= F_PIR/N_shares_PIR
-F_GPRO_p= F_GPRO/N_shares_GPRO
-F_TCS_p= F_TCS/N_shares_TCS
-F_JCP_p= F_PIR/N_shares_JCP
-F_SHLDQ_p= F_SHLDQ/N_shares_SHLDQ
-​
-div_PIR=0
-div_GPRO=0
-div_TCS=0
-div_JCP=0
+div_GNC=0
+div_SMRT=0
+div_ODP=0
+div_ASNA=0
 div_SHLDQ=0
 ​
-beta_PIR = 1.63
-beta_GPRO = 0.87
-beta_TCS = 0.61
-beta_JCP = 1.63
+beta_GNC = 1.25
+div_GNC=0
+F_GNC = 0.5*LT_GNC+ST_GNC
+​
+beta_SMRT = -0.01
+beta_ODP = 2.54
+beta_ASNA = 1.07
 beta_SHLDQ = 2.41
 ​
 ​
-​
-​
-​
-V_guess_PIR = 1500; sigma_V_guess_PIR = 2; EqA=PIR_eq; sigEA=PIR_sigma; rf = 0.01763; F= F_PIR; q = div_PIR; T =1;
-x = (V_guess_PIR,sigma_V_guess_PIR)
-V_PIR, sigmaV_PIR = Get_V_sigV()
-print(V_PIR, sigmaV_PIR)
-V = V_PIR; F = F_PIR;T =1; rf=0.01763; q = 0; sigma = sigmaV_PIR
-B0_PIR, y_PIR, cs_PIR, equity_PIR = Merton(V, F, T, rf, q, sigma)
-print(B0_PIR, y_PIR, cs_PIR, equity_PIR)
-MRP = 0.043
-rf = 0.01763
-beta = beta_PIR
-sigma_V = sigmaV_PIR
-F = F_PIR
-V0 = V_PIR
-T = 1
-DD_PIR, PD_PIR, DD_rn_PIR, PD_rn_PIR = get_all_credit_stuff(rf, beta,MRP,sigma_V, F, V0, T)
-print(DD_PIR, PD_PIR, DD_rn_PIR, PD_rn_PIR)
-V_guess_GPRO = 1300; sigma_V_guess_GPRO = 1; EqA=GPRO_eq; sigEA=GPRO_sigma; rf = 0.01763; F= F_GPRO; q = div_GPRO; T =1;
-x = (V_guess_GPRO,sigma_V_guess_GPRO)
-V_GPRO, sigmaV_GPRO = Get_V_sigV()
-print(V_GPRO, sigmaV_GPRO)
-V = V_GPRO; F = F_GPRO;T =1; rf=0.01763; q = 0; sigma = sigmaV_GPRO
-B0_GPRO, y_GPRO, cs_GPRO, equity_GPRO = Merton(V, F, T, rf, q, sigma)
-print(B0_GPRO, y_GPRO, cs_GPRO, equity_GPRO)
-MRP = 0.043
-rf = 0.01763
-beta = beta_GPRO
-sigma_V = sigmaV_GPRO
-F = F_GPRO
-V0 = V_GPRO
-T = 1
-DD_GPRO, PD_GPRO, DD_rn_GPRO, PD_rn_GPRO = get_all_credit_stuff(rf, beta,MRP,sigma_V, F, V0, T)
-print(DD_GPRO, PD_GPRO, DD_rn_GPRO, PD_rn_GPRO)
-V_guess_TCS = 1300; sigma_V_guess_TCS = 1; EqA=TCS_eq; sigEA=TCS_sigma; rf = 0.01763; F= F_TCS; q = div_TCS; T =1;
-x = (V_guess_TCS,sigma_V_guess_TCS)
-V_TCS, sigmaV_TCS = Get_V_sigV()
-print(V_TCS, sigmaV_TCS)
-V = V_TCS; F = F_TCS;T =1; rf=0.01763; q = 0; sigma = sigmaV_TCS
-B0_TCS, y_TCS, cs_TCS, equity_TCS = Merton(V, F, T, rf, q, sigma)
-print(B0_TCS, y_TCS, cs_TCS, equity_TCS)
-MRP = 0.043
-rf = 0.01763
-beta = beta_TCS
-sigma_V = sigmaV_TCS
-F = F_TCS
-V0 = V_TCS
-T = 1
-DD_TCS, PD_TCS, DD_rn_TCS, PD_rn_TCS = get_all_credit_stuff(rf, beta,MRP,sigma_V, F, V0, T)
-print(DD_TCS, PD_TCS, DD_rn_TCS, PD_rn_TCS)
-V_guess_JCP = 1300; sigma_V_guess_JCP = 1; EqA=JCP_eq; sigEA=JCP_sigma; rf = 0.01763; F= F_JCP; q = div_JCP; T =1;
-x = (V_guess_JCP,sigma_V_guess_JCP)
-V_JCP, sigmaV_JCP = Get_V_sigV()
-print(V_JCP, sigmaV_JCP)
-V = V_JCP; F = F_JCP;T =1; rf=0.01763; q = 0; sigma = sigmaV_JCP
-B0_JCP, y_JCP, cs_JCP, equity_JCP = Merton(V, F, T, rf, q, sigma)
-print(B0_JCP, y_JCP, cs_JCP, equity_JCP)
-rf = 0.01763
-beta = beta_JCP
-sigma_V = sigmaV_JCP
-F = F_JCP
-V0 = V_JCP
-T = 1
-DD_JCP, PD_JCP, DD_rn_JCP, PD_rn_JCP = get_all_credit_stuff(rf, beta,MRP,sigma_V, F, V0, T)
-print(DD_JCP, PD_JCP, DD_rn_JCP, PD_rn_JCP)
-V_guess_SHLDQ = 1300; sigma_V_guess_SHLDQ = 1; EqA=SHLDQ_eq; sigEA=SHLDQ_sigma; rf = 0.01763; F= F_SHLDQ; q = div_SHLDQ; T =1;
-x = (V_guess_SHLDQ,sigma_V_guess_SHLDQ)
+#GNC
+EqA=GNC_eq; sigEA=GNC_sigma;  F= F_GNC; q = div_GNC; T =1;
+V_GNC, sigmaV_GNC = Get_V_sigV()
+print(V_GNC, sigmaV_GNC)
+V = V_GNC; F = F_GNC; q = 0; sigma = sigmaV_GNC
+B0_GNC, y_GNC, cs_GNC, equity_GNC = Merton(V, F, T, rf, q, sigma)
+print(B0_GNC, y_GNC, cs_GNC, equity_GNC)
+beta = beta_GNC
+sigma_V = sigmaV_GNC
+F = F_GNC
+V0 = V_GNC
+DD_GNC, PD_GNC, DD_rn_GNC, PD_rn_GNC = DD_PD(rf, beta,MRP,sigma_V, F, V0, T)
+print(DD_GNC, PD_GNC, DD_rn_GNC, PD_rn_GNC)
+#SMRT
+EqA=SMRT_eq; sigEA=SMRT_sigma; F= F_SMRT; q = div_SMRT; T =1;
+V_SMRT, sigmaV_SMRT = Get_V_sigV()
+print(V_SMRT, sigmaV_SMRT)
+V = V_SMRT; F = F_SMRT; q = 0; sigma = sigmaV_SMRT
+B0_SMRT, y_SMRT, cs_SMRT, equity_SMRT = Merton(V, F, T, rf, q, sigma)
+print(B0_SMRT, y_SMRT, cs_SMRT, equity_SMRT)
+beta = beta_SMRT
+sigma_V = sigmaV_SMRT
+F = F_SMRT
+V0 = V_SMRT
+DD_SMRT, PD_SMRT, DD_rn_SMRT, PD_rn_SMRT = DD_PD(rf, beta,MRP,sigma_V, F, V0, T)
+print(DD_SMRT, PD_SMRT, DD_rn_SMRT, PD_rn_SMRT)
+#ODP
+EqA=ODP_eq; sigEA=ODP_sigma; F= F_ODP; q = div_ODP; T =1;
+V_ODP, sigmaV_ODP = Get_V_sigV()
+print(V_ODP, sigmaV_ODP)
+V = V_ODP; F = F_ODP; q = 0; sigma = sigmaV_ODP
+B0_ODP, y_ODP, cs_ODP, equity_ODP = Merton(V, F, T, rf, q, sigma)
+print(B0_ODP, y_ODP, cs_ODP, equity_ODP)
+beta = beta_ODP
+sigma_V = sigmaV_ODP
+F = F_ODP
+V0 = V_ODP
+DD_ODP, PD_ODP, DD_rn_ODP, PD_rn_ODP = DD_PD(rf, beta,MRP,sigma_V, F, V0, T)
+print(DD_ODP, PD_ODP, DD_rn_ODP, PD_rn_ODP)
+#ASNA
+EqA=ASNA_eq; sigEA=ASNA_sigma; F= F_ASNA; q = div_ASNA; T =1;
+V_ASNA, sigmaV_ASNA = Get_V_sigV()
+print(V_ASNA, sigmaV_ASNA)
+V = V_ASNA; F = F_ASNA; q = 0; sigma = sigmaV_ASNA
+B0_ASNA, y_ASNA, cs_ASNA, equity_ASNA = Merton(V, F, T, rf, q, sigma)
+print(B0_ASNA, y_ASNA, cs_ASNA, equity_ASNA)
+beta = beta_ASNA
+sigma_V = sigmaV_ASNA
+F = F_ASNA
+V0 = V_ASNA
+DD_ASNA, PD_ASNA, DD_rn_ASNA, PD_rn_ASNA = DD_PD(rf, beta,MRP,sigma_V, F, V0, T)
+print(DD_ASNA, PD_ASNA, DD_rn_ASNA, PD_rn_ASNA)
+#SHLDQ
+EqA=SHLDQ_eq; sigEA=SHLDQ_sigma; F= F_SHLDQ; q = div_SHLDQ; T =1;
 V_SHLDQ, sigmaV_SHLDQ = Get_V_sigV()
 print(V_SHLDQ, sigmaV_SHLDQ)
-V = V_SHLDQ; F = F_SHLDQ;T =1; rf=0.01763; q = 0; sigma = sigmaV_SHLDQ
+V = V_SHLDQ; F = F_SHLDQ; q = 0; sigma = sigmaV_SHLDQ
 B0_SHLDQ, y_SHLDQ, cs_SHLDQ, equity_SHLDQ = Merton(V, F, T, rf, q, sigma)
 print(B0_SHLDQ, y_SHLDQ, cs_SHLDQ, equity_SHLDQ)
-rf = 0.01763
 beta = beta_SHLDQ
 sigma_V = sigmaV_SHLDQ
 F = F_SHLDQ
 V0 = V_SHLDQ
-T = 1
-DD_SHLDQ, PD_SHLDQ, DD_rn_SHLDQ, PD_rn_SHLDQ = get_all_credit_stuff(rf, beta,MRP,sigma_V, F, V0, T)
+DD_SHLDQ, PD_SHLDQ, DD_rn_SHLDQ, PD_rn_SHLDQ = DD_PD(rf, beta,MRP,sigma_V, F, V0, T)
 print(DD_SHLDQ, PD_SHLDQ, DD_rn_SHLDQ, PD_rn_SHLDQ)
-​
